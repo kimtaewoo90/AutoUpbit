@@ -4,6 +4,15 @@ import datetime
 import math
 import telegram
 import pandas as pd
+from functions import Utils
+
+def ConnectToUpbit():
+    # 객체생성(Upbit 연결)
+    access = "frGzp5hUEaQBNQ1uuO60Dx3QGkSm5ugsEVdfrpnr"
+    secret = "L4wHqPfrfc7x8NYWHaL8IoUxbV8MBuhoxZG2ZHJa"
+    upbit = pyupbit.Upbit(access, secret)
+
+    return upbit
 
 
 def SaveResult(profit_time, loss_time, balance, start_tag):
@@ -65,19 +74,16 @@ def GetVolume():
 
 if __name__ == "__main__":
 
-    # 객체생성(Upbit 연결)
-    access = "frGzp5hUEaQBNQ1uuO60Dx3QGkSm5ugsEVdfrpnr"
-    secret = "L4wHqPfrfc7x8NYWHaL8IoUxbV8MBuhoxZG2ZHJa"
-    upbit = pyupbit.Upbit(access, secret)
+    conn = Utils.Connection()
+    upbit = conn.ConnectToUpbit()
 
     # initialize params
     loss_time = 0
     profit_time = 0
     total_gain = 0
-    hold = False
-    noMoreVol = False
-    start_tag = True
-    start_msg = True
+    noMoreVol = False # Get Tickers
+    start_tag = True  # For Save result (make DataFrame for first time)
+    start_msg = True  # To send msg for first running bot
 
     # start
     while True:
@@ -141,6 +147,7 @@ if __name__ == "__main__":
                 LossCut Price : {math.ceil(buy_price*0.975)}
                 """)
 
+                
                 # Monitoring the price for Sell coin
                 while True:
                     try:
@@ -185,6 +192,7 @@ if __name__ == "__main__":
                                     Gain : {round(res_balance - balance)}
                                     Total PnL : {round(total_gain)}
                                     """)
+                                    noMoreVol = False
                                     break
 
                                 # 지정가 매도 성공시
@@ -216,7 +224,7 @@ if __name__ == "__main__":
                                 loss_time = loss_time + 1
                                 print(f"loss count : [ {loss_time} ]")
                                 SendMsg(f"loss count : [ {loss_time} ]")
-                            
+                                noMoreVol = False
                             #SaveResult(profit_time, loss_time, total_gain, start_tag)
                             break
                     except:
