@@ -63,4 +63,8 @@ if __name__ == "__main__":
     #uuid = sell_resp["uuid"]
     #market_resp = market_order(uuid, remained_coin)
 
-    print(pyupbit.get_ohlcv(Ticker, "minute5"))
+    #print(pyupbit.get_ohlcv(Ticker, "minute5"))
+
+    import os, sys
+
+    print(sys.path.append(os.path.dirname(os.path.dirname(__file__))))
