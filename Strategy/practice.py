@@ -58,7 +58,9 @@ if __name__ == "__main__":
     #buy_resp = upbit.buy_market_order(Ticker, 5000)
 
     # 지정가 매도
-    remained_coin =  upbit.get_balance(Ticker)
-    sell_resp = upbit.sell_limit_order(Ticker, 1000, remained_coin)
-    uuid = sell_resp["uuid"]
-    market_resp = market_order(uuid, remained_coin)
+    #remained_coin =  upbit.get_balance(Ticker)
+    #sell_resp = upbit.sell_limit_order(Ticker, 1000, remained_coin)
+    #uuid = sell_resp["uuid"]
+    #market_resp = market_order(uuid, remained_coin)
+
+    print(pyupbit.get_ohlcv(Ticker, "minute5"))
