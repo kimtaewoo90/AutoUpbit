@@ -11,4 +11,3 @@ class Connection:
         return upbit
 
 
-

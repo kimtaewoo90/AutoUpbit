@@ -6,14 +6,6 @@ import telegram
 import pandas as pd
 from functions import Utils
 
-def ConnectToUpbit():
-    # 객체생성(Upbit 연결)
-    access = "frGzp5hUEaQBNQ1uuO60Dx3QGkSm5ugsEVdfrpnr"
-    secret = "L4wHqPfrfc7x8NYWHaL8IoUxbV8MBuhoxZG2ZHJa"
-    upbit = pyupbit.Upbit(access, secret)
-
-    return upbit
-
 
 def SaveResult(profit_time, loss_time, balance, start_tag):
     now = datetime.datetime.now()
@@ -81,6 +73,7 @@ if __name__ == "__main__":
     loss_time = 0
     profit_time = 0
     total_gain = 0
+    
     noMoreVol = False # Get Tickers
     start_tag = True  # For Save result (make DataFrame for first time)
     start_msg = True  # To send msg for first running bot
@@ -102,10 +95,11 @@ if __name__ == "__main__":
             if noMoreVol is False:
                 day = now.day
                 profit_time = 0
-                loss_time = 0
+                #loss_time = 0
                 Ticker = GetVolume()
+                start_msg = True
 
-            noMoreVol = True
+            noMoreVol = True    # GetVolume 중복 실행 방지
 
             if start_msg is True:
                 SendMsg(f"Monitoring price of {Ticker}")
@@ -129,7 +123,7 @@ if __name__ == "__main__":
             sell_price = 0
             balance = upbit.get_balance("KRW")
             judge_ma = GetMA(Ticker, cur_price, 20, 5)
-            print(f"Judge MA : {judge_ma} / five_closed : {five_closed} / Current_price : {cur_price} / Target_buy_price : {round(five_closed * 1.005)}")
+            print(f"Target Coin : {Ticker} / Judge MA : {judge_ma} / five_closed : {five_closed} / Current_price : {cur_price} / Target_buy_price : {round(five_closed * 1.005)}")
 
             # Buy the coin
             if cur_price >= five_closed * 1.005 and judge_ma is True:
@@ -139,12 +133,7 @@ if __name__ == "__main__":
                 resp = upbit.buy_market_order(Ticker, buy_amt)
                 print(f"Success to Buy {Ticker} at {buy_price}")
                 SendMsg(
-                f"""
-                !Success to Buy!
-                Ticker : {Ticker}
-                Buy Price : {buy_price}
-                TargetPrice : {round(buy_price * 1.02)}
-                LossCut Price : {math.ceil(buy_price*0.975)}
+                f"""!Success to Buy!\nTicker : {Ticker}\nBuy Price : {buy_price}\nTargetPrice : {round(buy_price * 1.02)}\nLossCut Price : {math.ceil(buy_price*0.975)}
                 """)
 
                 
@@ -153,7 +142,7 @@ if __name__ == "__main__":
                     try:
                         time.sleep(1)
                         cur_price_to_sell = pyupbit.get_current_price(Ticker)
-                        print(f"[{datetime.datetime.now()}]: Ticker : {Ticker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {round(buy_price * 1.02)} / LosCut_Sell_Price : {math.ceil(buy_price*0.975)}" )
+                        print(f"[{datetime.datetime.now()}]: Ticker : {Ticker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {round(buy_price * 1.02)} / LosCut_Sell_Price : {math.ceil(buy_price*0.975)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
 
                         # Sell the coin
                         if cur_price_to_sell >= math.ceil(buy_price * 1.02) or cur_price_to_sell <= math.ceil(buy_price * 0.975):# or sell_timing is True:
@@ -178,21 +167,15 @@ if __name__ == "__main__":
                                     upbit.cancel_order(uuid)
                                     time.sleep(1)
                                     resp_market_sell = upbit.sell_market_order(Ticker, remained_coin)
-                                    #market_uuid = resp_market_sell["uuid"]
-                                    #time.sleep(5)
-                                    #get_order = upbit.get_order(Ticker, state="done")
-                                    #market_sell_price = get_order["price"]
+                                    time.sleep(2)
                                     res_balance = upbit.get_balance("KRW")
                                     total_gain = total_gain + (res_balance - balance)
                                     SendMsg(
-                                    f"""
-                                    시장가 매도 체결 결과
-                                    Start Balance : {round(balance)}
-                                    End Balance : {round(res_balance)}
-                                    Gain : {round(res_balance - balance)}
-                                    Total PnL : {round(total_gain)}
+                                    f"""시장가 매도 체결 결과\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
                                     """)
-                                    noMoreVol = False
+                                    df = pyupbit.get_ohlcv(Ticker, "minute5")
+                                    five_bong = df.iloc[-1]
+                                    sell_five_bong = five_bong.name                                    
                                     break
 
                                 # 지정가 매도 성공시
@@ -201,17 +184,11 @@ if __name__ == "__main__":
                                     time.sleep(1)
                                     total_gain = total_gain + (res_balance - balance)
                                     SendMsg(
-                                    f"""
-                                    지정가 매도 체결 결과
-                                    Sell price : {sell_price}
-                                    Bought price : {buy_price}
-                                    PnL : {format((sell_price - buy_price)/buy_price * 100, '.2f')} %
-                                    Start Balance : {round(balance)}
-                                    End Balance : {round(res_balance)}
-                                    Gain : {round(res_balance - balance)}
-                                    Total PnL : {round(total_gain)}
+                                    f"""지정가 매도 체결 결과\nSell price : {sell_price}\nBought price : {buy_price}\nPnL : {format((sell_price - buy_price)/buy_price * 100, '.2f')} %\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
                                     """)
-                                    
+                                    df = pyupbit.get_ohlcv(Ticker, "minute5")
+                                    five_bong = df.iloc[-1]
+                                    sell_five_bong = five_bong.name
                                     break
                             
                             # 시장가 또는 지정가 매도가 체결 된 후 profit 인지 loss 인지 판단 & 알림
@@ -226,6 +203,12 @@ if __name__ == "__main__":
                                 SendMsg(f"loss count : [ {loss_time} ]")
                                 noMoreVol = False
                             #SaveResult(profit_time, loss_time, total_gain, start_tag)
+
+                            # 매도시의 5분봉과 같은 5분봉에서 재매수 방지
+                            while True:
+                                if datetime.datetime.now() - sell_five_bong > datetime.timedelta(minutes=5):
+                                    SendMsg("Find signals in new Five scalping\n")
+                                    break
                             break
                     except:
                         print(type(cur_price_to_sell))
