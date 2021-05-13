@@ -5,10 +5,12 @@ import datetime
 import math
 import telegram
 import pandas as pd
-from functions import Utils
-from PyQt5.QtCore import QThread
-from PyQt5.QtWidgets import QMainWindow, QApplication
+
+from PyQt5.QtCore import QThread, pyqtSignal, Qt
+from PyQt5.QtWidgets import QMainWindow, QApplication, QProgressBar, QTableWidgetItem, QHeaderView
 from PyQt5 import uic
+from functions import Utils
+
 
 
 def SaveResult(profit_time, loss_time, balance, start_tag):
@@ -67,59 +69,134 @@ def GetVolume():
     SendMsg(f"Found Target Coin\nTarget Coin : {res[0][0]}")
     return res[0][0]
 
-
+global_ticker = "KRW-BTC"
 #-------------------------------------------------------#
 
-class Bot(QThread):
+class OrderbookWorker(QThread):
+
+    dataSent = pyqtSignal(list)
+    GlobalTicker = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
+        self.alive = True
+
+    def run(self):
+
+        global global_ticker
+
+        while self.alive:
+
+            self.GlobalTicker.emit(global_ticker)
+            orderbook = pyupbit.get_orderbook(str(global_ticker))
+            
+            time.sleep(0.1)
+            try:
+                self.dataSent.emit(orderbook)
+            except:
+                print("None type orderbook")
+    def close(self):
+        self.alive = False
+
+    def restart(self):
+        self.alive = True
+
+
+class Bot(QThread):
+
+    Log = pyqtSignal(str)
+    
+    # Informations
+    GetTicker = pyqtSignal(str)
+    GetCurPrice = pyqtSignal(float)
+    Balance = pyqtSignal(float)
+    TotalPnL = pyqtSignal(float)
+    GetBuyCnt = pyqtSignal(str)  # 매수여부
+    ProfitTime = pyqtSignal(int)
+    LossTime = pyqtSignal(int)
+
+
+    # Signal1
+    GetSignal1 = pyqtSignal(bool)
+    GetFiveClose = pyqtSignal(float)
+    GetTargetPrice = pyqtSignal(float)
+
+    # Signal2
+    GetFiveOpen = pyqtSignal(float)
+    GetSignal2 = pyqtSignal(bool)
+
+    # Signal3
+    GetMAsignals = pyqtSignal(bool)
+    GetSignal3 = pyqtSignal(bool)
+
+
+    #TargetTicker = pyqtSignal(str)
+    BuyPrice = pyqtSignal(float)
+    CurPrice = pyqtSignal(float)            
+    TargetPrice = pyqtSignal(float)
+    LossCutPrice = pyqtSignal(float)
+    PnL = pyqtSignal(str)
+
+                          
+    def __init__(self):
+        super().__init__()
+        self.GlobalTicker = "KRW-BTC"
+
         #self.running = True
 
     def run(self):
 
         conn = Utils.Connection()
         upbit = conn.ConnectToUpbit()
-
+    
         # initialize params
+        target_price = 0
+        total_loss_time = 0
         loss_time = 0
+        total_profit_time = 0
         profit_time = 0
         total_gain = 0
+        signal1 = False
+        signal2 = False
+        signal3 = False
+
+        global global_ticker
         
         noMoreVol = False # Get Tickers
-        start_tag = True  # For Save result (make DataFrame for first time)
+        #start_tag = True  # For Save result (make DataFrame for first time)
         start_msg = True  # To send msg for first running bot
-        five_mins = True  # To imporve performance
+        #five_mins = True  # To imporve performance
+
+        start_balance = upbit.get_balance("KRW")
 
         # start
         while True:
 
-            target = 0
             if loss_time == 3:
                 sleep_time = 3600
                 SendMsg(f"loss count : {loss_time}\nsleep time : {sleep_time} sec")
                 time.sleep(sleep_time)
                 loss_time = 0
                 noMoreVol = False
+                #start_orderbook = False
 
             # Monitoring the price for Buy coin
             while True:
-                now = datetime.datetime.now()
-
                 if noMoreVol is False:
-                    day = now.day
                     profit_time = 0
-                    Ticker = GetVolume()
-                    #Ticker = "KRW-DOGE"
-                    #self.ticker = Ticker
-                    #self.sig_ticker.setText("Ticker")
-
+                    self.Log.emit("Getting Target Ticker")
+                    global_ticker = GetVolume()
+                    Ticker = global_ticker
+                    self.Log.emit(f"Found Ticker, Target Coin is {Ticker}")
                     start_msg = True
                     bot_start = datetime.datetime.now()
+
 
                 noMoreVol = True    # GetVolume 중복 실행 방지
 
                 if start_msg is True:
                     SendMsg(f"Monitoring price of {Ticker}")
+                    self.Log.emit(f"Monitoring price of {Ticker}")
                     start_msg = False
                     
                 try:
@@ -128,47 +205,90 @@ class Bot(QThread):
                     five_open = pyupbit.get_ohlcv(Ticker, "minute5")
                     five_open = five_open.iloc[-1]
                     five_open = five_open["open"]
-                    five_times = res.name
                     five_temp = five_closed
                     cur_price = pyupbit.get_current_price(Ticker)
-                    time.sleep(2)
+                    time.sleep(0.5)
                 except:
                     five_closed = five_temp
 
                 if not type(cur_price) == float:
-                    time.sleep(1)
+                    time.sleep(0.2)
                     cur_price = pyupbit.get_current_price(Ticker)
+                    self.Log.emit("Error with Get current price")
 
                 buy_price = 0
                 sell_price = 0
                 balance = upbit.get_balance("KRW")
                 judge_ma = GetMA(Ticker, cur_price, 20, 5)
-                print(f"Target Coin : {Ticker} / Judge MA : {judge_ma} / five_closed : {five_closed} now_five_open : {five_open} / Current_price : {cur_price} / Target_buy_price : {round(five_closed * 1.005)}")
+                
+                target_price = round(five_closed * 1.005)
+                if cur_price > target_price:
+                    signal1 = True
+                
+                if five_open >= five_closed:
+                    signal2 = True
 
+                if judge_ma is True:
+                    signal3 = True
+
+                # Display
+                self.GetTicker.emit(Ticker)
+                self.GetCurPrice.emit(cur_price)
+                self.GetTargetPrice.emit(round(five_closed * 1.005))
+                self.GetFiveClose.emit(five_closed)
+                self.GetFiveOpen.emit(five_open)
+                self.GetSignal1.emit(signal1)
+                self.GetSignal2.emit(signal2)
+                self.GetSignal3.emit(signal3)
+                self.GetMAsignals.emit(judge_ma)
+                self.GetBuyCnt.emit("False")
+                #self.Log.emit(f"Target Coin : {Ticker} / Judge MA : {judge_ma} / five_closed : {five_closed} now_five_open : {five_open} / Current_price : {cur_price} / Target_buy_price : {target_price}")
+                self.Log.emit(f"[{datetime.datetime.now()}] : Monitoring {Ticker}")
+                self.Balance.emit(balance)
+
+                print(f"Target Coin : {Ticker} / Judge MA : {judge_ma} / five_closed : {five_closed} now_five_open : {five_open} / Current_price : {cur_price} / Target_buy_price : {target_price}")
+
+                # 1시간동안 매수가 없으면 티커 다시 찾기
                 if bot_start - datetime.datetime.now() > datetime.timedelta(hours=1):
                     noMoreVol = False
 
                 # Buy the coin
-                if cur_price >= five_closed * 1.005 and five_open >= five_closed and judge_ma is True:
+                if signal1 is True and signal2 is True and signal3 is True:
                     
                     buy_amt = balance - math.ceil(balance * 0.05)
                     buy_price = cur_price
-                    resp = upbit.buy_market_order(Ticker, buy_amt)
+                    #resp = upbit.buy_market_order(Ticker, buy_amt)
+                    upbit.buy_market_order(Ticker, buy_amt)
                     print(f"Success to Buy {Ticker} at {buy_price}")
+
+                    # 매수여부 Display
+                    self.GetBuyCnt.emit("True")
+
                     SendMsg(
                     f"""!Success to Buy!\nTicker : {Ticker}\nBuy Price : {buy_price}\nTargetPrice : {round(buy_price * 1.02)}\nLossCut Price : {math.ceil(buy_price*0.975)}
+                    """)
+                    self.Log.emit( f"""!Success to Buy!\nTicker : {Ticker}\nBuy Price : {buy_price}\nTargetPrice : {round(buy_price * 1.02)}\nLossCut Price : {math.ceil(buy_price*0.975)}
                     """)
 
                     
                     # Monitoring the price for Sell coin
                     while True:
                         try:
-                            time.sleep(1)
+                            time.sleep(0.5)
+                            losscut_rate = 0.95
                             cur_price_to_sell = pyupbit.get_current_price(Ticker)
-                            print(f"[{datetime.datetime.now()}]: Ticker : {Ticker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {round(buy_price * 1.02)} / LosCut_Sell_Price : {math.ceil(buy_price*0.975)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
+                            print(f"[{datetime.datetime.now()}]: Ticker : {Ticker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {round(buy_price * 1.02)} / LosCut_Sell_Price : {math.ceil(buy_price*losscut_rate)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
+                            #self.Log.emit(f"[{datetime.datetime.now()}]: Ticker : {Ticker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {round(buy_price * 1.02)} / LosCut_Sell_Price : {math.ceil(buy_price*0.975)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
+
+                            monitoring_pnl = f"{format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %"
+                            self.GetCurPrice.emit(cur_price_to_sell)
+                            self.BuyPrice.emit(buy_price)
+                            self.TargetPrice.emit(round(buy_price * 1.02))
+                            self.LossCutPrice.emit(math.ceil(buy_price * losscut_rate))
+                            self.PnL.emit(monitoring_pnl)
 
                             # Sell the coin
-                            if cur_price_to_sell >= math.ceil(buy_price * 1.02) or cur_price_to_sell <= math.ceil(buy_price * 0.975):# or sell_timing is True:
+                            if cur_price_to_sell >= math.ceil(buy_price * 1.02) or cur_price_to_sell <= math.ceil(buy_price * losscut_rate):# or sell_timing is True:
                                 remained_coin = upbit.get_balance(Ticker)
                                 resp_sell = upbit.sell_limit_order(Ticker, cur_price_to_sell, remained_coin)
                                 sell_price = cur_price_to_sell
@@ -176,26 +296,37 @@ class Bot(QThread):
                                 print(uuid)
                                 SendMsg("waiting for Limit Short Orders")
                                 print("waiting for Limit Short Orders")
+                                self.Log.emit("waiting for Limit Short Orders")
 
                                 sell_start_time = time.time()
                                 while True:
                                     state = upbit.get_order(Ticker)
                                     waiting_sell_time = time.time()
 
+                                    # 수동매도 시 break
+                                    #if upbit.get_balance(Ticker) == 0:
+                                    #    self.Log.emit("수동매도 되었습니다.")
+                                    #    break
                                     #print(f"waiting_sell_time - sell_start_time = {waiting_sell_time - sell_start_time}")
                                     
                                     # 계속 지정가 매도가 체결이 안되면 취소하고 시장가로 매도 하기
-                                    if waiting_sell_time - sell_start_time > 200:
+                                    if waiting_sell_time - sell_start_time > 60:
                                         SendMsg("시장가 매도 주문 시작")
                                         upbit.cancel_order(uuid)
                                         time.sleep(1)
-                                        resp_market_sell = upbit.sell_market_order(Ticker, remained_coin)
-                                        time.sleep(2)
+                                        #resp_market_sell = upbit.sell_market_order(Ticker, remained_coin)
+                                        upbit.sell_market_order(Ticker, remained_coin)
+                                        self.Log.emit("시장가 매도 후 잔고 변경중(5sec)")
+                                        time.sleep(5)
                                         res_balance = upbit.get_balance("KRW")
                                         total_gain = total_gain + (res_balance - balance)
                                         SendMsg(
                                         f"""시장가 매도 체결 결과\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
                                         """)
+                                        self.Log.emit(f"""시장가 매도 체결 결과\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
+                                        """)
+                                        self.Balance.emit(res_balance)
+                                        self.TotalPnL.emit(res_balance - start_balance)
                                         df = pyupbit.get_ohlcv(Ticker, "minute5")
                                         five_bong = df.iloc[-1]
                                         sell_five_bong = five_bong.name                                    
@@ -209,6 +340,11 @@ class Bot(QThread):
                                         SendMsg(
                                         f"""지정가 매도 체결 결과\nSell price : {sell_price}\nBought price : {buy_price}\nPnL : {format((sell_price - buy_price)/buy_price * 100, '.2f')} %\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
                                         """)
+                                        self.Log.emit(f"""지정가 매도 체결 결과\nSell price : {sell_price}\nBought price : {buy_price}\nPnL : {format((sell_price - buy_price)/buy_price * 100, '.2f')} %\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
+                                        """)
+                                        self.Balance.emit(res_balance)
+                                        self.TotalPnL.emit(res_balance - start_balance)
+
                                         df = pyupbit.get_ohlcv(Ticker, "minute5")
                                         five_bong = df.iloc[-1]
                                         sell_five_bong = five_bong.name
@@ -217,25 +353,43 @@ class Bot(QThread):
                                 # 시장가 또는 지정가 매도가 체결 된 후 profit 인지 loss 인지 판단 & 알림
                                 if sell_price > buy_price:
                                     profit_time = profit_time + 1
-                                    print(f"Profit count : [ {profit_time} ]")
-                                    SendMsg(f"Profit count : [ {profit_time} ]")
+                                    total_profit_time = total_profit_time + 1
+                                    
+                                    SendMsg(f"Profit count : [ {total_profit_time} ]")
+                                    self.Log.emit(f"Profit count : [ {total_profit_time} ]")
 
                                 elif sell_price <= buy_price:
                                     loss_time = loss_time + 1
-                                    print(f"loss count : [ {loss_time} ]")
+                                    total_loss_time = total_loss_time + 1
+
                                     SendMsg(f"loss count : [ {loss_time} ]")
+                                    self.Log.emit(f"loss count : [ {loss_time} ]")
+
                                     noMoreVol = False
                                 #SaveResult(profit_time, loss_time, total_gain, start_tag)
+
+                                self.ProfitTime.emit(total_profit_time)
+                                self.LossTime.emit(total_loss_time)
+
+                                # 매도 완료시 시그널 False로 초기화.
+                                #self.Getsignal1.emit(False)
+                                #self.Getsignal2.emit(False)
+                                #self.Getsignal3.emit(False)
+                                #self.BuyPrice.emit(0.0)
+                                #self.TargetPrice.emit(0.0)
+                                #self.LossCutPrice.emit(0.0)
+                            
 
                                 # 매도시의 5분봉과 같은 5분봉에서 재매수 방지
                                 while True:
                                     if datetime.datetime.now() - sell_five_bong > datetime.timedelta(minutes=5):
                                         SendMsg("Find signals in new Five scalping\n")
+                                        self.Log.emit("Find signals in new Five scalping\n")
                                         break
                                 break
                         except:
-                            print(type(cur_price_to_sell))
-                            continue 
+                            print("error..")
+                            #continue 
                 break
 
 
@@ -246,7 +400,7 @@ class Bot(QThread):
     #def pause(self):
     #    self.running = False
 
-main_ui = uic.loadUiType("autoUpbit.ui")[0]
+main_ui = uic.loadUiType("autoUpbit_v2.ui")[0]
 
 class MainWindows(QMainWindow, main_ui):
     
@@ -255,13 +409,165 @@ class MainWindows(QMainWindow, main_ui):
         self.setupUi(self)
 
         self.bot = Bot()
-        self.bot.start()
+        self.bot.Log.connect(self.Log)
+        self.bot.Balance.connect(self.Balance)
+        self.bot.TotalPnL.connect(self.TotalPnL)
 
+        # Buy Monitoring
+        self.bot.GetTicker.connect(self.GetTicker)
+        self.bot.GetCurPrice.connect(self.GetCurPrice)
+        self.bot.GetFiveClose.connect(self.GetFiveClose)
+        self.bot.GetFiveOpen.connect(self.GetFiveOpen)
+        self.bot.GetMAsignals.connect(self.GetMAsignals)
+        self.bot.GetTargetPrice.connect(self.GetTargetPrice)
+        self.bot.GetBuyCnt.connect(self.GetBuyCnt)
+
+        # Sell Monitoring
+        #self.bot.TargetTicker.connect(self.TargetTicker)
+        self.bot.BuyPrice.connect(self.BuyPrice)
+        self.bot.CurPrice.connect(self.CurPrice)
+        self.bot.TargetPrice.connect(self.TargetPrice)
+        self.bot.LossCutPrice.connect(self.LossCutPrice)
+        self.bot.PnL.connect(self.PnL)
+        self.bot.ProfitTime.connect(self.ProfitTime)
+        self.bot.LossTime.connect(self.LossTime)
+
+        # Signals
+        self.bot.GetSignal1.connect(self.GetSignal1)
+        self.bot.GetSignal2.connect(self.GetSignal2)
+        self.bot.GetSignal3.connect(self.GetSignal3)
+
+
+ 
+        # -------- Get OrderBook ---------- #
+        table = self.orderbook
+        header = table.horizontalHeader()
+        twidth = header.width()
+        width = []
+        for column in range(header.count()):
+            header.setSectionResizeMode(column, QHeaderView.ResizeToContents)
+            width.append(header.sectionSize(column))
+ 
+        wfactor = twidth / sum(width)
+        for column in range(header.count()):
+            header.setSectionResizeMode(column, QHeaderView.Interactive)
+            header.resizeSection(column, width[column]*wfactor)
+
+
+
+        for i in range(10):
+            # 매도호가
+            item_0 = QTableWidgetItem(str(""))
+            item_0.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.orderbook.setItem(10 + i, 2, item_0)
+
+            item_1 = QTableWidgetItem(str(""))
+            item_1.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.orderbook.setItem(10 + i, 1, item_1)
+
+            item_2 = QTableWidgetItem(str(""))
+            item_2.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.orderbook.setItem(9 - i, 1, item_2)
+
+            item_3 = QTableWidgetItem(str(""))
+            item_3.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.orderbook.setItem(9 - i, 0, item_3)
+            #item_2 = QProgressBar(self.orderbook)
+            #item_2.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            #item_2.setStyleSheet("""
+            #     QProgressBar {background-color : rgba(0, 0, 0, 0%);border : 1}
+            #     QProgressBar::Chunk {background-color : rgba(255, 0, 0, 50%);border : 1}
+            # """)
+            #self.orderbook.setCellWidget(i, 2, item_2)
+
+        self.ow = OrderbookWorker()
+        self.ow.dataSent.connect(self.SetOrderBook)
+        self.start_orderbook.clicked.connect(self.RestartOrderbook)
+        self.stop_orderbook.clicked.connect(self.StopOrderbook)
+        self.ow.GlobalTicker.connect(self.SetGlobalTicker)
+
+        # Thread Start
+        self.bot.start()
+        self.ow.start()
+
+    def SetGlobalTicker(self, contents):
+        self.orderbook_ticker.setText(str(contents))
+
+    def SetOrderBook(self, data):
+        for i in range(10):
+            # ask 매도
+            # bid 매수
+            bid_price = data[0]["orderbook_units"][i]["bid_price"]
+            bid_size = data[0]["orderbook_units"][i]["bid_size"]
+            ask_price = data[0]["orderbook_units"][i]["ask_price"]
+            ask_size = data[0]["orderbook_units"][i]["ask_size"]
+            item_0 = self.orderbook.item(10+i, 2)
+            item_0.setText(f"{bid_size}")
+            item_1 = self.orderbook.item(10+i, 1)
+            item_1.setText(f"{bid_price}")
+
+            item_2 = self.orderbook.item(9-i, 1)
+            item_2.setText(f"{ask_price}")
+            item_3 = self.orderbook.item(9-i, 0)
+            item_3.setText(f"{ask_size}")
+
+    def RestartOrderbook(self):
+        self.ow.restart()
+    
+    def StopOrderbook(self):
+        self.ow.close()
+    
+    def Log(self, contents):
+        self.log_text.appendPlainText(str(contents))
+    def Balance(self, contents):
+        self.info_balance.setText(str(contents))
+    def TotalPnL(self, contents):
+        self.info_pnl.setText(str(contents))
+
+    def GetSignal1(self, contents):
+        self.sig_signal1.setText(str(contents))
+    def GetSignal2(self, contents):
+        self.sig_signal2.setText(str(contents))
+    def GetSignal3(self, contents):
+        self.sig_signal3.setText(str(contents))
+
+    # Buy Monitoring
+    def GetTicker(self, ticker):
+        self.sig_ticker.setText(ticker)
+    def GetCurPrice(self, cur_price):
+        self.cur_price.setText(str(cur_price))
+    def GetFiveClose(self, five_close):
+        self.sig_five_close_1.setText(str(five_close))
+        self.sig_five_close_2.setText(str(five_close))
+    def GetFiveOpen(self, five_open):
+        self.sig_five_open.setText(str(five_open))
+    def GetMAsignals(self, signals):
+        self.sig_ma.setText(str(signals))
+    def GetTargetPrice(self, target_price):
+        self.sig_target_price.setText(str(target_price))
+    def GetBuyCnt(self, buy_cnt):
+        self.sig_buy_cnt.setText(str(buy_cnt))
+
+    # Sell Monitoring
+    def TargetTicker(self, contents):
+        self.pro_ticker.setText(str(contents))
+    def BuyPrice(self, contents):
+        self.pro_buy_price.setText(str(contents))
+    def CurPrice(self, contents):
+        self.cur_price.setText(str(contents))
+    def TargetPrice(self, contents):
+        self.pro_target_price.setText(str(contents))
+    def LossCutPrice(self, contents):
+        self.pro_losscut_price.setText(str(contents))
+    def PnL(self, contents):
+        self.pro_pnl.setText(str(contents))
+    def ProfitTime(self, contents):
+        self.pro_profit_cnt.setText(str(contents))
+    def LossTime(self, contents):
+        self.pro_loss_cnt.setText(str(contents))
 
         # 시작버튼
         #self.start_btn.clicked.connect(self.StartBot)
-
-
 
 
 if __name__ == "__main__":
@@ -270,9 +576,9 @@ if __name__ == "__main__":
     mainUi = MainWindows()
     mainUi.show()
     app.exec_()
+        
 
     
 
 
 
-        

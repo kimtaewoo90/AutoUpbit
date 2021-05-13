@@ -1,0 +1,762 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1232</width>
+    <height>1043</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QGroupBox" name="groupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>310</y>
+      <width>641</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Signal2. 현재 5분봉시가 &gt;= 직전 5분봉종가</string>
+    </property>
+    <widget class="QLabel" name="label_2">
+     <property name="geometry">
+      <rect>
+       <x>420</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>시그널 충족여부</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_6">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>직전종가</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="sig_signal2">
+     <property name="geometry">
+      <rect>
+       <x>530</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="sig_five_close_2">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_7">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>30</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>현재시가</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="sig_five_open">
+     <property name="geometry">
+      <rect>
+       <x>290</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_2">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>510</y>
+      <width>641</width>
+      <height>111</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>매수완료, 매도 시점 모니터링</string>
+    </property>
+    <widget class="QLabel" name="label_14">
+     <property name="geometry">
+      <rect>
+       <x>200</x>
+       <y>30</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>목표가</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="pro_target_price">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_17">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>70</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>수익률</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="pro_pnl">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>70</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_18">
+     <property name="geometry">
+      <rect>
+       <x>370</x>
+       <y>30</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>손절가</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="pro_losscut_price">
+     <property name="geometry">
+      <rect>
+       <x>420</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_19">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>매수가</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="pro_buy_price">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_3">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>20</y>
+      <width>641</width>
+      <height>211</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Informations</string>
+    </property>
+    <widget class="QLabel" name="label_15">
+     <property name="geometry">
+      <rect>
+       <x>360</x>
+       <y>30</y>
+       <width>31</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>수익</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_16">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>30</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Balance</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="info_pnl">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>30</y>
+       <width>221</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="info_balance">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>30</y>
+       <width>261</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>80</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>타켓코인</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="sig_ticker">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>80</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_4">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>80</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>현재가</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="cur_price">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>80</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_20">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>120</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>매수여부</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="sig_buy_cnt">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>120</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_11">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>160</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>익절횟수</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="pro_profit_cnt">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>160</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_13">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>160</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>손절횟수</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="pro_loss_cnt">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>160</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_5">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>230</y>
+      <width>641</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Signal1.  현재가 &gt; 직전종가 * 1.005</string>
+    </property>
+    <widget class="QLabel" name="label_8">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>30</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>타켓가격</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_22">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>직전종가</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="sig_target_price">
+     <property name="geometry">
+      <rect>
+       <x>290</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="sig_five_close_1">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_25">
+     <property name="geometry">
+      <rect>
+       <x>420</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>시그널 충족여부</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="sig_signal1">
+     <property name="geometry">
+      <rect>
+       <x>530</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_6">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>400</y>
+      <width>641</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Signal3. 5분 Moving Average &gt; 20분 Moving Average</string>
+    </property>
+    <widget class="QTextEdit" name="sig_ma">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_28">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>71</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>MA signals</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="sig_signal3">
+     <property name="geometry">
+      <rect>
+       <x>530</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_3">
+     <property name="geometry">
+      <rect>
+       <x>420</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>시그널 충족여부</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QPushButton" name="start_btn">
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>630</y>
+      <width>113</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Start Bot</string>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_4">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>670</y>
+      <width>1191</width>
+      <height>311</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Logs</string>
+    </property>
+   </widget>
+   <widget class="QPlainTextEdit" name="log_text">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>700</y>
+      <width>1171</width>
+      <height>271</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="orderbook_GB">
+    <property name="geometry">
+     <rect>
+      <x>660</x>
+      <y>20</y>
+      <width>551</width>
+      <height>661</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Orderbook</string>
+    </property>
+    <widget class="QTableWidget" name="orderbook">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>531</width>
+       <height>621</height>
+      </rect>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>531</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>531</width>
+       <height>621</height>
+      </size>
+     </property>
+     <row>
+      <property name="text">
+       <string>Ask10</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Ask09</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Ask08</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Ask07</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Ask06</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Ask05</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Ask04</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Ask03</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Ask02</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Ask01</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Bid01</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Bid02</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Bid03</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Bid04</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Bid05</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Bid06</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Bid07</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Bid08</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Bid09</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Bid10</string>
+      </property>
+     </row>
+     <column>
+      <property name="text">
+       <string>Ask Offer</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Price</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Bid Offer</string>
+      </property>
+     </column>
+    </widget>
+   </widget>
+   <widget class="QPushButton" name="start_orderbook">
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>630</y>
+      <width>151</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Start OrderBook</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="stop_orderbook">
+    <property name="geometry">
+     <rect>
+      <x>522</x>
+      <y>630</y>
+      <width>131</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Stop OrderBook</string>
+    </property>
+   </widget>
+   <widget class="QTextEdit" name="orderbook_ticker">
+    <property name="geometry">
+     <rect>
+      <x>730</x>
+      <y>10</y>
+      <width>151</width>
+      <height>31</height>
+     </rect>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1232</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuTaewooBot">
+    <property name="title">
+     <string>TaewooBot</string>
+    </property>
+   </widget>
+   <addaction name="menuTaewooBot"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
