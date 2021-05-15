@@ -6,71 +6,21 @@ import math
 import telegram
 import pandas as pd
 
+# PyQt UI imports
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtWidgets import QMainWindow, QApplication, QProgressBar, QTableWidgetItem, QHeaderView
 from PyQt5 import uic
+
+# Users package
+import Signals
 from functions import Utils
 
-
-
-def SaveResult(profit_time, loss_time, balance, start_tag):
-    now = datetime.datetime.now()
-    res = [now, profit_time, loss_time, balance]
-    if start_tag is True:
-        res_df = pd.DataFrame(
-            res, columns=["Time", "profit_time", "loss_time", "balance"])
-        start_tag = False
-    else:
-        temp_df = pd.DataFrame(
-            res, columns=["Time", "profit_time", "loss_time", "balance"])
-        res_df = res_df.append(temp_df)
-
-
-def SendMsg(msg):
-    chat_token = "1474721655:AAH7cSJoNQdesO_lXRRGUf__mGIInPpicdU"
-    bot = telegram.Bot(token=chat_token)
-    bot.send_message(chat_id="1542664370", text=msg)
-
-
-def GetMA(ticker, cur_price, big_days, small_days):
-    df = pyupbit.get_ohlcv(ticker, "minute5")
-    closed = df["close"]
-
-    closed[-1] = cur_price
-    big_windows = closed.rolling(big_days)
-    small_windows = closed.rolling(small_days)
-
-    #print(f"20mins ma : {big_windows.mean()[-1]}\n 5mins ma : {small_windows.mean()[-1]}")
-    if big_windows.mean()[-1] < small_windows.mean()[-1]:
-        return True
-    else:
-        return False
-
-
-def GetTarget(ticker):
-    Ticker = ticker
-    df = pyupbit.get_ohlcv(Ticker, "minute5")
-
-    res = df.iloc[-2]
-    return res
-
-
-def GetVolume():
-    pairs = dict()
-    tickers = pyupbit.get_tickers(fiat="KRW")
-
-    SendMsg("Finding the Target Coins")
-    for i in range(len(tickers)):
-        time.sleep(0.5)
-        df = pyupbit.get_ohlcv(tickers[i], "day")
-        pairs['%s' % tickers[i]] = df.iloc[-1]["volume"] * df.iloc[-1]["close"]
-
-    res = sorted(pairs.items(), key=lambda x: x[1], reverse=True)
-    SendMsg(f"Found Target Coin\nTarget Coin : {res[0][0]}")
-    return res[0][0]
+# ----------- Global Variables ------------------ #
 
 global_ticker = "KRW-BTC"
-#-------------------------------------------------------#
+#------------------------------------------------ #
+
+
 
 class OrderbookWorker(QThread):
 
@@ -95,11 +45,13 @@ class OrderbookWorker(QThread):
                 self.dataSent.emit(orderbook)
             except:
                 print("None type orderbook")
+
     def close(self):
         self.alive = False
 
     def restart(self):
         self.alive = True
+        self.start()
 
 
 class Bot(QThread):
@@ -146,9 +98,7 @@ class Bot(QThread):
 
     def run(self):
 
-        conn = Utils.Connection()
-        upbit = conn.ConnectToUpbit()
-    
+
         # initialize params
         target_price = 0
         total_loss_time = 0
@@ -160,6 +110,7 @@ class Bot(QThread):
         signal2 = False
         signal3 = False
 
+        # Global variables
         global global_ticker
         
         noMoreVol = False # Get Tickers
@@ -167,14 +118,21 @@ class Bot(QThread):
         start_msg = True  # To send msg for first running bot
         #five_mins = True  # To imporve performance
 
-        start_balance = upbit.get_balance("KRW")
+        # declare user imports
+        util = Utils.UtilClass()
+        conn = Utils.Connection()
+        upbit = conn.ConnectToUpbit()
+    
 
+        #signals = Signals.Signals()
+        start_balance = upbit.get_balance("KRW")
+        
         # start
         while True:
 
             if loss_time == 3:
                 sleep_time = 3600
-                SendMsg(f"loss count : {loss_time}\nsleep time : {sleep_time} sec")
+                util.SendMsg(f"loss count : {loss_time}\nsleep time : {sleep_time} sec")
                 time.sleep(sleep_time)
                 loss_time = 0
                 noMoreVol = False
@@ -185,7 +143,7 @@ class Bot(QThread):
                 if noMoreVol is False:
                     profit_time = 0
                     self.Log.emit("Getting Target Ticker")
-                    global_ticker = GetVolume()
+                    global_ticker = util.GetVolume()
                     Ticker = global_ticker
                     self.Log.emit(f"Found Ticker, Target Coin is {Ticker}")
                     start_msg = True
@@ -195,12 +153,12 @@ class Bot(QThread):
                 noMoreVol = True    # GetVolume 중복 실행 방지
 
                 if start_msg is True:
-                    SendMsg(f"Monitoring price of {Ticker}")
+                    util.SendMsg(f"Monitoring price of {Ticker}")
                     self.Log.emit(f"Monitoring price of {Ticker}")
                     start_msg = False
                     
                 try:
-                    res = GetTarget(Ticker)
+                    res = util.GetTarget(Ticker)
                     five_closed = res["close"]
                     five_open = pyupbit.get_ohlcv(Ticker, "minute5")
                     five_open = five_open.iloc[-1]
@@ -219,17 +177,17 @@ class Bot(QThread):
                 buy_price = 0
                 sell_price = 0
                 balance = upbit.get_balance("KRW")
-                judge_ma = GetMA(Ticker, cur_price, 20, 5)
+                judge_ma = util.GetMA(Ticker, cur_price, 10, 5)
                 
                 target_price = round(five_closed * 1.005)
-                if cur_price > target_price:
-                    signal1 = True
-                
-                if five_open >= five_closed:
-                    signal2 = True
 
-                if judge_ma is True:
-                    signal3 = True
+                # Signals Class instance
+                signals = Signals.Signals()
+
+                # Get signals
+                signal1 = signals.signal1(cur_price, target_price)
+                signal2 = signals.signal2(five_open, five_closed)
+                signal3 = signals.signal3(judge_ma)
 
                 # Display
                 self.GetTicker.emit(Ticker)
@@ -242,7 +200,6 @@ class Bot(QThread):
                 self.GetSignal3.emit(signal3)
                 self.GetMAsignals.emit(judge_ma)
                 self.GetBuyCnt.emit("False")
-                #self.Log.emit(f"Target Coin : {Ticker} / Judge MA : {judge_ma} / five_closed : {five_closed} now_five_open : {five_open} / Current_price : {cur_price} / Target_buy_price : {target_price}")
                 self.Log.emit(f"[{datetime.datetime.now()}] : Monitoring {Ticker}")
                 self.Balance.emit(balance)
 
@@ -264,7 +221,7 @@ class Bot(QThread):
                     # 매수여부 Display
                     self.GetBuyCnt.emit("True")
 
-                    SendMsg(
+                    util.SendMsg(
                     f"""!Success to Buy!\nTicker : {Ticker}\nBuy Price : {buy_price}\nTargetPrice : {round(buy_price * 1.02)}\nLossCut Price : {math.ceil(buy_price*0.975)}
                     """)
                     self.Log.emit( f"""!Success to Buy!\nTicker : {Ticker}\nBuy Price : {buy_price}\nTargetPrice : {round(buy_price * 1.02)}\nLossCut Price : {math.ceil(buy_price*0.975)}
@@ -294,7 +251,7 @@ class Bot(QThread):
                                 sell_price = cur_price_to_sell
                                 uuid = resp_sell["uuid"]
                                 print(uuid)
-                                SendMsg("waiting for Limit Short Orders")
+                                util.SendMsg("waiting for Limit Short Orders")
                                 print("waiting for Limit Short Orders")
                                 self.Log.emit("waiting for Limit Short Orders")
 
@@ -311,7 +268,7 @@ class Bot(QThread):
                                     
                                     # 계속 지정가 매도가 체결이 안되면 취소하고 시장가로 매도 하기
                                     if waiting_sell_time - sell_start_time > 60:
-                                        SendMsg("시장가 매도 주문 시작")
+                                        util.SendMsg("시장가 매도 주문 시작")
                                         upbit.cancel_order(uuid)
                                         time.sleep(1)
                                         #resp_market_sell = upbit.sell_market_order(Ticker, remained_coin)
@@ -320,7 +277,7 @@ class Bot(QThread):
                                         time.sleep(5)
                                         res_balance = upbit.get_balance("KRW")
                                         total_gain = total_gain + (res_balance - balance)
-                                        SendMsg(
+                                        util.SendMsg(
                                         f"""시장가 매도 체결 결과\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
                                         """)
                                         self.Log.emit(f"""시장가 매도 체결 결과\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
@@ -337,7 +294,7 @@ class Bot(QThread):
                                         res_balance = upbit.get_balance("KRW")
                                         time.sleep(1)
                                         total_gain = total_gain + (res_balance - balance)
-                                        SendMsg(
+                                        util.SendMsg(
                                         f"""지정가 매도 체결 결과\nSell price : {sell_price}\nBought price : {buy_price}\nPnL : {format((sell_price - buy_price)/buy_price * 100, '.2f')} %\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
                                         """)
                                         self.Log.emit(f"""지정가 매도 체결 결과\nSell price : {sell_price}\nBought price : {buy_price}\nPnL : {format((sell_price - buy_price)/buy_price * 100, '.2f')} %\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
@@ -355,14 +312,14 @@ class Bot(QThread):
                                     profit_time = profit_time + 1
                                     total_profit_time = total_profit_time + 1
                                     
-                                    SendMsg(f"Profit count : [ {total_profit_time} ]")
+                                    util.SendMsg(f"Profit count : [ {total_profit_time} ]")
                                     self.Log.emit(f"Profit count : [ {total_profit_time} ]")
 
                                 elif sell_price <= buy_price:
                                     loss_time = loss_time + 1
                                     total_loss_time = total_loss_time + 1
 
-                                    SendMsg(f"loss count : [ {loss_time} ]")
+                                    util.SendMsg(f"loss count : [ {loss_time} ]")
                                     self.Log.emit(f"loss count : [ {loss_time} ]")
 
                                     noMoreVol = False
@@ -383,7 +340,7 @@ class Bot(QThread):
                                 # 매도시의 5분봉과 같은 5분봉에서 재매수 방지
                                 while True:
                                     if datetime.datetime.now() - sell_five_bong > datetime.timedelta(minutes=5):
-                                        SendMsg("Find signals in new Five scalping\n")
+                                        util.SendMsg("Find signals in new Five scalping\n")
                                         self.Log.emit("Find signals in new Five scalping\n")
                                         break
                                 break
@@ -456,29 +413,40 @@ class MainWindows(QMainWindow, main_ui):
 
 
         for i in range(10):
-            # 매도호가
-            item_0 = QTableWidgetItem(str(""))
-            item_0.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.orderbook.setItem(10 + i, 2, item_0)
+            
+            # 매수호가량
+            #item_0 = QTableWidgetItem(str(""))
+            #item_0.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            #self.orderbook.setItem(10 + i, 2, item_0)
 
+            item_0 = QProgressBar(self.orderbook)
+            item_0.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            item_0.setStyleSheet("""
+                QProgressBar {background-color : rgba(0, 0, 0, 0%);border : 1}
+                QProgressBar::Chunk {background-color : rgba(0, 255, 0, 40%);border : 1}
+             """)
+
+            self.orderbook.setCellWidget(10+i, 2, item_0)
+
+            # 매수호가
             item_1 = QTableWidgetItem(str(""))
             item_1.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.orderbook.setItem(10 + i, 1, item_1)
 
+            # 매도호가
             item_2 = QTableWidgetItem(str(""))
             item_2.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.orderbook.setItem(9 - i, 1, item_2)
 
-            item_3 = QTableWidgetItem(str(""))
-            item_3.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.orderbook.setItem(9 - i, 0, item_3)
-            #item_2 = QProgressBar(self.orderbook)
-            #item_2.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            #item_2.setStyleSheet("""
-            #     QProgressBar {background-color : rgba(0, 0, 0, 0%);border : 1}
-            #     QProgressBar::Chunk {background-color : rgba(255, 0, 0, 50%);border : 1}
-            # """)
-            #self.orderbook.setCellWidget(i, 2, item_2)
+   
+            item_3 = QProgressBar(self.orderbook)
+            item_3.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            item_3.setStyleSheet("""
+                 QProgressBar {background-color : rgba(0, 0, 0, 0%);border : 1}
+                 QProgressBar::Chunk {background-color : rgba(255, 0, 0, 50%);border : 1}
+             """)
+            self.orderbook.setCellWidget(9 -i, 0, item_3)
+
 
         self.ow = OrderbookWorker()
         self.ow.dataSent.connect(self.SetOrderBook)
@@ -494,6 +462,14 @@ class MainWindows(QMainWindow, main_ui):
         self.orderbook_ticker.setText(str(contents))
 
     def SetOrderBook(self, data):
+        
+        max_list = list()
+        for i in range(10):
+            max_list.append(data[0]["orderbook_units"][i]["bid_size"])
+            max_list.append(data[0]["orderbook_units"][i]["ask_size"])
+        
+        maxSize = max(max_list)
+
         for i in range(10):
             # ask 매도
             # bid 매수
@@ -501,15 +477,24 @@ class MainWindows(QMainWindow, main_ui):
             bid_size = data[0]["orderbook_units"][i]["bid_size"]
             ask_price = data[0]["orderbook_units"][i]["ask_price"]
             ask_size = data[0]["orderbook_units"][i]["ask_size"]
-            item_0 = self.orderbook.item(10+i, 2)
-            item_0.setText(f"{bid_size}")
+            #item_0 = self.orderbook.item(10+i, 2)
+            #item_0.setText(f"{bid_size}")
             item_1 = self.orderbook.item(10+i, 1)
             item_1.setText(f"{bid_price}")
-
             item_2 = self.orderbook.item(9-i, 1)
             item_2.setText(f"{ask_price}")
-            item_3 = self.orderbook.item(9-i, 0)
-            item_3.setText(f"{ask_size}")
+            #item_3 = self.orderbook.item(9-i, 0)
+            #item_3.setText(f"{ask_size}")
+
+            item_0 = self.orderbook.cellWidget(10+i, 2)
+            item_0.setRange(0, maxSize)
+            item_0.setFormat(f"{bid_size}")
+            item_0.setValue(bid_size)
+            
+            item_3 = self.orderbook.cellWidget(9-i, 0)
+            item_3.setRange(0, maxSize)
+            item_3.setFormat(f"{ask_size}")
+            item_3.setValue(ask_size)
 
     def RestartOrderbook(self):
         self.ow.restart()
