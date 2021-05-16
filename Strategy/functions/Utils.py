@@ -81,3 +81,17 @@ class UtilClass:
         self.SendMsg(f"Found Target Coin\nTarget Coin : {res[0][0]}")
         return res[0][0]
 
+    def GetVolumeList(self):
+        pairs = dict()
+        tickers = pyupbit.get_tickers(fiat="KRW")
+
+        self.SendMsg("Finding the Target Coins")
+        for i in range(len(tickers)):
+            time.sleep(0.5)
+            df = pyupbit.get_ohlcv(tickers[i], "day")
+            pairs['%s' % tickers[i]] = df.iloc[-1]["volume"] * df.iloc[-1]["close"]
+        
+        res = sorted(pairs.items(), key=lambda x: x[1], reverse=True)
+        self.SendMsg(f"Found Target Coin\nTarget Coin : {res[0][0]}")
+        return res
+

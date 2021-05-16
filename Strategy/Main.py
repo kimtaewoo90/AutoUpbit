@@ -18,9 +18,13 @@ from functions import Utils
 # ----------- Global Variables ------------------ #
 
 global_ticker = "KRW-BTC"
+global_balance = 0
+global_pnl = 0
+global_profit_time = 0
+global_loss_time = 0
 #------------------------------------------------ #
 
-
+# Test branch
 
 class OrderbookWorker(QThread):
 
@@ -59,45 +63,28 @@ class Bot(QThread):
     Log = pyqtSignal(str)
     
     # Informations
-    GetTicker = pyqtSignal(str)
-    GetCurPrice = pyqtSignal(float)
     Balance = pyqtSignal(float)
     TotalPnL = pyqtSignal(float)
-    GetBuyCnt = pyqtSignal(str)  # 매수여부
     ProfitTime = pyqtSignal(int)
     LossTime = pyqtSignal(int)
 
+    # Targets
+    GetTicker = pyqtSignal(int, str)
+    GetCurPrice = pyqtSignal(int, float)
+    GetBuyCnt = pyqtSignal(int, str)  # 매수여부
+    GetSignals = pyqtSignal(int, str)
+    GetPnL = pyqtSignal(int, str)
 
-    # Signal1
-    GetSignal1 = pyqtSignal(bool)
-    GetFiveClose = pyqtSignal(float)
-    GetTargetPrice = pyqtSignal(float)
-
-    # Signal2
-    GetFiveOpen = pyqtSignal(float)
-    GetSignal2 = pyqtSignal(bool)
-
-    # Signal3
-    GetMAsignals = pyqtSignal(bool)
-    GetSignal3 = pyqtSignal(bool)
-
-
-    #TargetTicker = pyqtSignal(str)
-    BuyPrice = pyqtSignal(float)
-    CurPrice = pyqtSignal(float)            
-    TargetPrice = pyqtSignal(float)
-    LossCutPrice = pyqtSignal(float)
-    PnL = pyqtSignal(str)
 
                           
-    def __init__(self):
+    def __init__(self,targetNum, targetTicker):
         super().__init__()
         self.GlobalTicker = "KRW-BTC"
-
+        self.targetNum = targetNum
+        self.targetTicker = targetTicker
         #self.running = True
 
     def run(self):
-
 
         # initialize params
         target_price = 0
@@ -112,11 +99,12 @@ class Bot(QThread):
 
         # Global variables
         global global_ticker
+        global global_balance
+        global global_pnl
+        global global_profit_time
+        global global_loss_time
         
-        noMoreVol = False # Get Tickers
-        #start_tag = True  # For Save result (make DataFrame for first time)
         start_msg = True  # To send msg for first running bot
-        #five_mins = True  # To imporve performance
 
         # declare user imports
         util = Utils.UtilClass()
@@ -126,58 +114,50 @@ class Bot(QThread):
 
         #signals = Signals.Signals()
         start_balance = upbit.get_balance("KRW")
+        global_balance = start_balance
         
         # start
         while True:
 
             if loss_time == 3:
                 sleep_time = 3600
-                util.SendMsg(f"loss count : {loss_time}\nsleep time : {sleep_time} sec")
+                util.SendMsg(f"Target Coin: {self.targetTicker}\nloss count : {loss_time}\nsleep time : {sleep_time} sec")
                 time.sleep(sleep_time)
                 loss_time = 0
-                noMoreVol = False
                 #start_orderbook = False
 
             # Monitoring the price for Buy coin
             while True:
-                if noMoreVol is False:
-                    profit_time = 0
-                    self.Log.emit("Getting Target Ticker")
-                    global_ticker = util.GetVolume()
-                    Ticker = global_ticker
-                    self.Log.emit(f"Found Ticker, Target Coin is {Ticker}")
-                    start_msg = True
-                    bot_start = datetime.datetime.now()
+                    
 
-
-                noMoreVol = True    # GetVolume 중복 실행 방지
+                self.Log.emit(f"Found Ticker, Target Coin is {self.targetTicker}")
 
                 if start_msg is True:
-                    util.SendMsg(f"Monitoring price of {Ticker}")
-                    self.Log.emit(f"Monitoring price of {Ticker}")
+                    util.SendMsg(f"Monitoring price of {self.targetTicker}")
+                    self.Log.emit(f"Monitoring price of {self.targetTicker}")
                     start_msg = False
                     
                 try:
-                    res = util.GetTarget(Ticker)
+                    res = util.GetTarget(self.targetTicker)
                     five_closed = res["close"]
-                    five_open = pyupbit.get_ohlcv(Ticker, "minute5")
+                    five_open = pyupbit.get_ohlcv(self.targetTicker, "minute5")
                     five_open = five_open.iloc[-1]
                     five_open = five_open["open"]
                     five_temp = five_closed
-                    cur_price = pyupbit.get_current_price(Ticker)
+                    cur_price = pyupbit.get_current_price(self.targetTicker)
                     time.sleep(0.5)
                 except:
                     five_closed = five_temp
 
                 if not type(cur_price) == float:
                     time.sleep(0.2)
-                    cur_price = pyupbit.get_current_price(Ticker)
+                    cur_price = pyupbit.get_current_price(self.targetTicker)
                     self.Log.emit("Error with Get current price")
 
                 buy_price = 0
                 sell_price = 0
                 balance = upbit.get_balance("KRW")
-                judge_ma = util.GetMA(Ticker, cur_price, 10, 5)
+                judge_ma = util.GetMA(self.targetTicker, cur_price, 10, 5)
                 
                 target_price = round(five_closed * 1.005)
 
@@ -190,41 +170,40 @@ class Bot(QThread):
                 signal3 = signals.signal3(judge_ma)
 
                 # Display
-                self.GetTicker.emit(Ticker)
-                self.GetCurPrice.emit(cur_price)
-                self.GetTargetPrice.emit(round(five_closed * 1.005))
-                self.GetFiveClose.emit(five_closed)
-                self.GetFiveOpen.emit(five_open)
-                self.GetSignal1.emit(signal1)
-                self.GetSignal2.emit(signal2)
-                self.GetSignal3.emit(signal3)
-                self.GetMAsignals.emit(judge_ma)
-                self.GetBuyCnt.emit("False")
-                self.Log.emit(f"[{datetime.datetime.now()}] : Monitoring {Ticker}")
-                self.Balance.emit(balance)
-
-                print(f"Target Coin : {Ticker} / Judge MA : {judge_ma} / five_closed : {five_closed} now_five_open : {five_open} / Current_price : {cur_price} / Target_buy_price : {target_price}")
+                self.GetTicker.emit(self.targetNum, self.targetTicker)
+                self.GetCurPrice.emit(self.targetNum, cur_price)
+                #self.GetTargetPrice.emit(self.targetNum, round(five_closed * 1.005))
+                #self.GetFiveClose.emit(self.targetNum, five_closed)
+                #self.GetFiveOpen.emit(self.targetNum, five_open)
+                self.GetSignals.emit(self.targetNum, str(signal1 and signal2 and signal3))
+                self.GetBuyCnt.emit(self.targetNum, "False")
+                self.Balance.emit(global_balance)
+                #elf.Log.emit(f"{self.targetTicker} of balance is {balance}")
 
                 # 1시간동안 매수가 없으면 티커 다시 찾기
-                if bot_start - datetime.datetime.now() > datetime.timedelta(hours=1):
-                    noMoreVol = False
+                #if bot_start - datetime.datetime.now() > datetime.timedelta(hours=1):
+                #    noMoreVol = False
 
                 # Buy the coin
                 if signal1 is True and signal2 is True and signal3 is True:
                     
-                    buy_amt = balance - math.ceil(balance * 0.05)
+                    buy_amt = global_balance - math.ceil(global_balance * 0.05)
+                    buy_amt = buy_amt / 5
                     buy_price = cur_price
                     #resp = upbit.buy_market_order(Ticker, buy_amt)
-                    upbit.buy_market_order(Ticker, buy_amt)
-                    print(f"Success to Buy {Ticker} at {buy_price}")
+                    upbit.buy_market_order(self.targetTicker, buy_amt)
+                    print(f"Success to Buy {self.targetTicker} at {buy_price}")
 
                     # 매수여부 Display
-                    self.GetBuyCnt.emit("True")
+                    self.GetBuyCnt.emit(self.targetNum, "True")
+
+                    profit_price = round(buy_price * 1.02)
+                    loss_price = math.ceil(buy_price * 0.95)
 
                     util.SendMsg(
-                    f"""!Success to Buy!\nTicker : {Ticker}\nBuy Price : {buy_price}\nTargetPrice : {round(buy_price * 1.02)}\nLossCut Price : {math.ceil(buy_price*0.975)}
+                    f"""!Success to Buy!\nTicker : {self.targetTicker}\nBuy Price : {buy_price}\nTargetPrice : {profit_price}\nLossCut Price : {loss_price}
                     """)
-                    self.Log.emit( f"""!Success to Buy!\nTicker : {Ticker}\nBuy Price : {buy_price}\nTargetPrice : {round(buy_price * 1.02)}\nLossCut Price : {math.ceil(buy_price*0.975)}
+                    self.Log.emit( f"""!Success to Buy!\nTicker : {self.targetTicker}\nBuy Price : {buy_price}\nTargetPrice : {profit_price}\nLossCut Price : {loss_price}
                     """)
 
                     
@@ -232,32 +211,33 @@ class Bot(QThread):
                     while True:
                         try:
                             time.sleep(0.5)
+                            profit_rate = 1.02
                             losscut_rate = 0.95
-                            cur_price_to_sell = pyupbit.get_current_price(Ticker)
-                            print(f"[{datetime.datetime.now()}]: Ticker : {Ticker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {round(buy_price * 1.02)} / LosCut_Sell_Price : {math.ceil(buy_price*losscut_rate)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
+                            cur_price_to_sell = pyupbit.get_current_price(self.targetTicker)
+                            #print(f"[{datetime.datetime.now()}]: Ticker : {self.targetTicker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {profit_price} / LosCut_Sell_Price : {math.ceil(buy_price*losscut_rate)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
                             #self.Log.emit(f"[{datetime.datetime.now()}]: Ticker : {Ticker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {round(buy_price * 1.02)} / LosCut_Sell_Price : {math.ceil(buy_price*0.975)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
 
                             monitoring_pnl = f"{format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %"
-                            self.GetCurPrice.emit(cur_price_to_sell)
-                            self.BuyPrice.emit(buy_price)
-                            self.TargetPrice.emit(round(buy_price * 1.02))
-                            self.LossCutPrice.emit(math.ceil(buy_price * losscut_rate))
-                            self.PnL.emit(monitoring_pnl)
+                            self.GetCurPrice.emit(self.targetNum, cur_price_to_sell)
+                            #self.BuyPrice.emit(self.targetNum, buy_price)
+                            #self.TargetPrice.emit(self.targetNum, round(buy_price * 1.02))
+                            #self.LossCutPrice.emit(self.targetNum, math.ceil(buy_price * losscut_rate))
+                            self.GetPnL.emit(self.targetNum, monitoring_pnl)
 
                             # Sell the coin
                             if cur_price_to_sell >= math.ceil(buy_price * 1.02) or cur_price_to_sell <= math.ceil(buy_price * losscut_rate):# or sell_timing is True:
-                                remained_coin = upbit.get_balance(Ticker)
-                                resp_sell = upbit.sell_limit_order(Ticker, cur_price_to_sell, remained_coin)
+                                remained_coin = upbit.get_balance(self.targetTicker)
+                                resp_sell = upbit.sell_limit_order(self.targetTicker, cur_price_to_sell, remained_coin)
                                 sell_price = cur_price_to_sell
                                 uuid = resp_sell["uuid"]
                                 print(uuid)
                                 util.SendMsg("waiting for Limit Short Orders")
                                 print("waiting for Limit Short Orders")
-                                self.Log.emit("waiting for Limit Short Orders")
+                                self.Log.emit(self.targetNum, "waiting for Limit Short Orders")
 
                                 sell_start_time = time.time()
                                 while True:
-                                    state = upbit.get_order(Ticker)
+                                    state = upbit.get_order(self.targetTicker)
                                     waiting_sell_time = time.time()
 
                                     # 수동매도 시 break
@@ -272,8 +252,8 @@ class Bot(QThread):
                                         upbit.cancel_order(uuid)
                                         time.sleep(1)
                                         #resp_market_sell = upbit.sell_market_order(Ticker, remained_coin)
-                                        upbit.sell_market_order(Ticker, remained_coin)
-                                        self.Log.emit("시장가 매도 후 잔고 변경중(5sec)")
+                                        upbit.sell_market_order(self.targetTicker, remained_coin)
+                                        self.Log.emit( "시장가 매도 후 잔고 변경중(5sec)")
                                         time.sleep(5)
                                         res_balance = upbit.get_balance("KRW")
                                         total_gain = total_gain + (res_balance - balance)
@@ -283,8 +263,9 @@ class Bot(QThread):
                                         self.Log.emit(f"""시장가 매도 체결 결과\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
                                         """)
                                         self.Balance.emit(res_balance)
-                                        self.TotalPnL.emit(res_balance - start_balance)
-                                        df = pyupbit.get_ohlcv(Ticker, "minute5")
+                                        global_pnl = res_balance - start_balance
+                                        self.TotalPnL.emit(global_pnl)
+                                        df = pyupbit.get_ohlcv(self.targetTicker, "minute5")
                                         five_bong = df.iloc[-1]
                                         sell_five_bong = five_bong.name                                    
                                         break
@@ -299,10 +280,13 @@ class Bot(QThread):
                                         """)
                                         self.Log.emit(f"""지정가 매도 체결 결과\nSell price : {sell_price}\nBought price : {buy_price}\nPnL : {format((sell_price - buy_price)/buy_price * 100, '.2f')} %\nStart Balance : {round(balance)}\nEnd Balance : {round(res_balance)}\nGain : {round(res_balance - balance)}\nTotal PnL : {round(total_gain)}
                                         """)
-                                        self.Balance.emit(res_balance)
-                                        self.TotalPnL.emit(res_balance - start_balance)
 
-                                        df = pyupbit.get_ohlcv(Ticker, "minute5")
+                                        global_balance = res_balance
+                                        global_pnl = global_balance - start_balance
+                                        self.Balance.emit(global_balance)
+                                        self.TotalPnL.emit(global_pnl)
+
+                                        df = pyupbit.get_ohlcv(self.targetTicker, "minute5")
                                         five_bong = df.iloc[-1]
                                         sell_five_bong = five_bong.name
                                         break
@@ -311,37 +295,28 @@ class Bot(QThread):
                                 if sell_price > buy_price:
                                     profit_time = profit_time + 1
                                     total_profit_time = total_profit_time + 1
+                                    global_profit_time = global_profit_time + 1
                                     
-                                    util.SendMsg(f"Profit count : [ {total_profit_time} ]")
-                                    self.Log.emit(f"Profit count : [ {total_profit_time} ]")
+                                    util.SendMsg(f"Profit count : [ {global_profit_time} ]")
+                                    self.Log.emit(f"Profit count : [ {global_profit_time} ]")
 
                                 elif sell_price <= buy_price:
                                     loss_time = loss_time + 1
                                     total_loss_time = total_loss_time + 1
+                                    global_loss_time = global_loss_time + 1
+                                    util.SendMsg(f"loss count : [ {global_loss_time} ]")
+                                    self.Log.emit( f"loss count : [ {global_loss_time} ]")
 
-                                    util.SendMsg(f"loss count : [ {loss_time} ]")
-                                    self.Log.emit(f"loss count : [ {loss_time} ]")
 
-                                    noMoreVol = False
-                                #SaveResult(profit_time, loss_time, total_gain, start_tag)
-
-                                self.ProfitTime.emit(total_profit_time)
-                                self.LossTime.emit(total_loss_time)
-
-                                # 매도 완료시 시그널 False로 초기화.
-                                #self.Getsignal1.emit(False)
-                                #self.Getsignal2.emit(False)
-                                #self.Getsignal3.emit(False)
-                                #self.BuyPrice.emit(0.0)
-                                #self.TargetPrice.emit(0.0)
-                                #self.LossCutPrice.emit(0.0)
+                                self.ProfitTime.emit(global_profit_time)
+                                self.LossTime.emit(global_loss_time)
                             
 
                                 # 매도시의 5분봉과 같은 5분봉에서 재매수 방지
                                 while True:
                                     if datetime.datetime.now() - sell_five_bong > datetime.timedelta(minutes=5):
                                         util.SendMsg("Find signals in new Five scalping\n")
-                                        self.Log.emit("Find signals in new Five scalping\n")
+                                        self.Log.emit(self.targetNum, "Find signals in new Five scalping\n")
                                         break
                                 break
                         except:
@@ -357,45 +332,77 @@ class Bot(QThread):
     #def pause(self):
     #    self.running = False
 
-main_ui = uic.loadUiType("autoUpbit_v2.ui")[0]
-
+#main_ui = uic.loadUiType("autoUpbit_v2.ui")[0]
+main_ui = uic.loadUiType("autoUpbit_v3_test.ui")[0]
 class MainWindows(QMainWindow, main_ui):
     
     def __init__(self):
         super().__init__()
         self.setupUi(self)
 
-        self.bot = Bot()
-        self.bot.Log.connect(self.Log)
-        self.bot.Balance.connect(self.Balance)
-        self.bot.TotalPnL.connect(self.TotalPnL)
+        util = Utils.UtilClass()
+        tickers = util.GetVolumeList()
+        # top5 vols
+        self.bot1 = Bot(1, tickers[0][0])
+        self.bot2 = Bot(2, tickers[1][0])
+        self.bot3 = Bot(3, tickers[2][0])
+        self.bot4 = Bot(4, tickers[3][0])
+        self.bot5 = Bot(5, tickers[4][0])
+        
+        # bot1
+        self.bot1.Balance(self.Balance)
+        self.bot1.TotalPnL(self.TotalPnL)
+        self.bot1.ProfitTime(self.ProfitTime)
+        self.bot1.LossTime(self.LossTime)
+        self.bot1.GetTicker(self.GetTicker)
+        self.bot1.GetCurPrice(self.GetCurPrice)
+        self.bot1.GetBuyCnt(self.GetBuyCnt)
+        self.bot1.GetSignals(self.GetSignals)
+        self.bot1.GetPnL(self.GetPnL)
 
-        # Buy Monitoring
-        self.bot.GetTicker.connect(self.GetTicker)
-        self.bot.GetCurPrice.connect(self.GetCurPrice)
-        self.bot.GetFiveClose.connect(self.GetFiveClose)
-        self.bot.GetFiveOpen.connect(self.GetFiveOpen)
-        self.bot.GetMAsignals.connect(self.GetMAsignals)
-        self.bot.GetTargetPrice.connect(self.GetTargetPrice)
-        self.bot.GetBuyCnt.connect(self.GetBuyCnt)
+        #bot2
+        self.bot2.Balance(self.Balance)
+        self.bot2.TotalPnL(self.TotalPnL)
+        self.bot2.ProfitTime(self.ProfitTime)
+        self.bot2.LossTime(self.LossTime)
+        self.bot2.GetTicker(self.GetTicker)
+        self.bot2.GetCurPrice(self.GetCurPrice)
+        self.bot2.GetBuyCnt(self.GetBuyCnt)
+        self.bot2.GetSignals(self.GetSignals)
+        self.bot2.GetPnL(self.GetPnL)
 
-        # Sell Monitoring
-        #self.bot.TargetTicker.connect(self.TargetTicker)
-        self.bot.BuyPrice.connect(self.BuyPrice)
-        self.bot.CurPrice.connect(self.CurPrice)
-        self.bot.TargetPrice.connect(self.TargetPrice)
-        self.bot.LossCutPrice.connect(self.LossCutPrice)
-        self.bot.PnL.connect(self.PnL)
-        self.bot.ProfitTime.connect(self.ProfitTime)
-        self.bot.LossTime.connect(self.LossTime)
+        #bot3
+        self.bot3.Balance(self.Balance)
+        self.bot3.TotalPnL(self.TotalPnL)
+        self.bot3.ProfitTime(self.ProfitTime)
+        self.bot3.LossTime(self.LossTime)
+        self.bot3.GetTicker(self.GetTicker)
+        self.bot3.GetCurPrice(self.GetCurPrice)
+        self.bot3.GetBuyCnt(self.GetBuyCnt)
+        self.bot3.GetSignals(self.GetSignals)
+        self.bot3.GetPnL(self.GetPnL)
+        #bot4
+        self.bot4.Balance(self.Balance)
+        self.bot4.TotalPnL(self.TotalPnL)
+        self.bot4.ProfitTime(self.ProfitTime)
+        self.bot4.LossTime(self.LossTime)
+        self.bot4.GetTicker(self.GetTicker)
+        self.bot4.GetCurPrice(self.GetCurPrice)
+        self.bot4.GetBuyCnt(self.GetBuyCnt)
+        self.bot4.GetSignals(self.GetSignals)
+        self.bot4.GetPnL(self.GetPnL)
+        #bot5
+        self.bot5.Balance(self.Balance)
+        self.bot5.TotalPnL(self.TotalPnL)
+        self.bot5.ProfitTime(self.ProfitTime)
+        self.bot5.LossTime(self.LossTime)
+        self.bot5.GetTicker(self.GetTicker)
+        self.bot5.GetCurPrice(self.GetCurPrice)
+        self.bot5.GetBuyCnt(self.GetBuyCnt)
+        self.bot5.GetSignals(self.GetSignals)
+        self.bot5.GetPnL(self.GetPnL)
 
-        # Signals
-        self.bot.GetSignal1.connect(self.GetSignal1)
-        self.bot.GetSignal2.connect(self.GetSignal2)
-        self.bot.GetSignal3.connect(self.GetSignal3)
 
-
- 
         # -------- Get OrderBook ---------- #
         table = self.orderbook
         header = table.horizontalHeader()
@@ -455,7 +462,11 @@ class MainWindows(QMainWindow, main_ui):
         self.ow.GlobalTicker.connect(self.SetGlobalTicker)
 
         # Thread Start
-        self.bot.start()
+        self.bot1.start()
+        self.bot2.start()
+        self.bot3.start()
+        self.bot4.start()
+        self.bot5.start()
         self.ow.start()
 
     def SetGlobalTicker(self, contents):
@@ -508,48 +519,58 @@ class MainWindows(QMainWindow, main_ui):
         self.info_balance.setText(str(contents))
     def TotalPnL(self, contents):
         self.info_pnl.setText(str(contents))
-
-    def GetSignal1(self, contents):
-        self.sig_signal1.setText(str(contents))
-    def GetSignal2(self, contents):
-        self.sig_signal2.setText(str(contents))
-    def GetSignal3(self, contents):
-        self.sig_signal3.setText(str(contents))
-
-    # Buy Monitoring
-    def GetTicker(self, ticker):
-        self.sig_ticker.setText(ticker)
-    def GetCurPrice(self, cur_price):
-        self.cur_price.setText(str(cur_price))
-    def GetFiveClose(self, five_close):
-        self.sig_five_close_1.setText(str(five_close))
-        self.sig_five_close_2.setText(str(five_close))
-    def GetFiveOpen(self, five_open):
-        self.sig_five_open.setText(str(five_open))
-    def GetMAsignals(self, signals):
-        self.sig_ma.setText(str(signals))
-    def GetTargetPrice(self, target_price):
-        self.sig_target_price.setText(str(target_price))
-    def GetBuyCnt(self, buy_cnt):
-        self.sig_buy_cnt.setText(str(buy_cnt))
-
-    # Sell Monitoring
-    def TargetTicker(self, contents):
-        self.pro_ticker.setText(str(contents))
-    def BuyPrice(self, contents):
-        self.pro_buy_price.setText(str(contents))
-    def CurPrice(self, contents):
-        self.cur_price.setText(str(contents))
-    def TargetPrice(self, contents):
-        self.pro_target_price.setText(str(contents))
-    def LossCutPrice(self, contents):
-        self.pro_losscut_price.setText(str(contents))
-    def PnL(self, contents):
-        self.pro_pnl.setText(str(contents))
+    
     def ProfitTime(self, contents):
         self.pro_profit_cnt.setText(str(contents))
     def LossTime(self, contents):
         self.pro_loss_cnt.setText(str(contents))
+# target1, cur_price1, signal1, profit1, check_buy1
+
+
+    def GetSignals(self, Num, contents):
+        if Num == 1: self.signal1.setText(str(contents))
+        elif Num == 2: self.signal2.setText(str(contents))
+        elif Num == 3: self.signal3.setText(str(contents))
+        elif Num == 4: self.signal4.setText(str(contents))
+        elif Num == 5: self.signal5.setText(str(contents))
+        
+ 
+
+    # Buy Monitoring
+    def GetTicker(self, Num, contents):
+        if Num == 1: self.target1.setText(str(contents))
+        elif Num == 2: self.target2.setText(str(contents))
+        elif Num == 3: self.target3.setText(str(contents))
+        elif Num == 4: self.target4.setText(str(contents))
+        elif Num == 5: self.target5.setText(str(contents))
+        
+    
+    
+    def GetCurPrice(self, Num, contents):
+        if Num == 1: self.cur_price1.setText(str(contents))
+        elif Num == 2: self.cur_price2.setText(str(contents))
+        elif Num == 3: self.cur_price3.setText(str(contents))
+        elif Num == 4: self.cur_price4.setText(str(contents))
+        elif Num == 5: self.cur_price5.setText(str(contents))    
+    
+
+    def GetBuyCnt(self, Num, contents):
+        if Num == 1: self.check_buy1.setText(str(contents))
+        elif Num == 2: self.check_buy2.setText(str(contents))
+        elif Num == 3: self.check_buy3.setText(str(contents))
+        elif Num == 4: self.check_buy4.setText(str(contents))
+        elif Num == 5: self.check_buy5.setText(str(contents)) 
+
+  
+    def PnL(self, Num, contents):
+        if Num == 1: self.profit1.setText(str(contents))
+        elif Num == 2: self.profit2.setText(str(contents))
+        elif Num == 3: self.profit3.setText(str(contents))
+        elif Num == 4: self.profit4.setText(str(contents))
+        elif Num == 5: self.profit5.setText(str(contents)) 
+    
+    
+
 
         # 시작버튼
         #self.start_btn.clicked.connect(self.StartBot)
