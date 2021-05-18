@@ -42,7 +42,7 @@ class UtilClass:
 
 
     def GetMA(self, ticker, cur_price, big_days, small_days):
-        df = pyupbit.get_ohlcv(ticker, "minute5")
+        df = pyupbit.get_ohlcv(ticker, "minute3")
         closed = df["close"]
 
         closed[-1] = cur_price
@@ -61,7 +61,7 @@ class UtilClass:
 
     def GetTarget(self, ticker):
         Ticker = ticker
-        df = pyupbit.get_ohlcv(Ticker, "minute5")
+        df = pyupbit.get_ohlcv(Ticker, "minute3")
 
         res = df.iloc[-2]
         return res

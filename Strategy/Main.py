@@ -211,10 +211,16 @@ class Bot(QThread):
                     while True:
                         try:
                             time.sleep(0.5)
+<<<<<<< HEAD
                             profit_rate = 1.02
                             losscut_rate = 0.95
                             cur_price_to_sell = pyupbit.get_current_price(self.targetTicker)
                             #print(f"[{datetime.datetime.now()}]: Ticker : {self.targetTicker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {profit_price} / LosCut_Sell_Price : {math.ceil(buy_price*losscut_rate)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
+=======
+                            losscut_rate = 0.98
+                            cur_price_to_sell = pyupbit.get_current_price(Ticker)
+                            print(f"[{datetime.datetime.now()}]: Ticker : {Ticker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {round(buy_price * 1.02)} / LosCut_Sell_Price : {math.ceil(buy_price*losscut_rate)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
+>>>>>>> master
                             #self.Log.emit(f"[{datetime.datetime.now()}]: Ticker : {Ticker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {round(buy_price * 1.02)} / LosCut_Sell_Price : {math.ceil(buy_price*0.975)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
 
                             monitoring_pnl = f"{format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %"
