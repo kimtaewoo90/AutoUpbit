@@ -48,6 +48,18 @@ class Signals():
         else:
             return False
 
+  
+    def sell_signal1(self, ticker, big_days, small_days):
+        df = pyupbit.get_ohlcv(ticker, "minute5")
+        closed = df["close"]
+        
+        small_windows = closed.rolling(small_days)
+
+        if small_windows.mean()[-2] > small_windows.mean()[-1]:
+            return True
+        else:
+            return False
+
 
 
 
@@ -63,7 +75,6 @@ class Bot(QThread):
     GetBuyCnt = pyqtSignal(str)  # 매수여부
     ProfitTime = pyqtSignal(int)
     LossTime = pyqtSignal(int)
-
 
     # Signal1
     GetSignal1 = pyqtSignal(bool)
@@ -89,7 +100,6 @@ class Bot(QThread):
                           
     def __init__(self):
         super().__init__()
-        #self.GlobalTicker = "KRW-BTC"
 
         #self.running = True
 
@@ -218,13 +228,15 @@ class Bot(QThread):
                     """)
                     self.Log.emit( f"""!Success to Buy!\nTicker : {Ticker}\nBuy Price : {buy_price}\nTargetPrice : {round(buy_price * 1.02)}\nLossCut Price : {math.ceil(buy_price*0.975)}
                     """)
-
                     
                     # Monitoring the price for Sell coin
                     while True:
                         try:
                             time.sleep(0.5)
-                            losscut_rate = 0.98
+
+                            losscut_rate = config.losscut_rate
+                            profit_rate = config.profit_rate
+
                             cur_price_to_sell = pyupbit.get_current_price(Ticker)
                             print(f"[{datetime.datetime.now()}]: Ticker : {Ticker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {round(buy_price * 1.02)} / LosCut_Sell_Price : {math.ceil(buy_price*losscut_rate)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
                             #self.Log.emit(f"[{datetime.datetime.now()}]: Ticker : {Ticker} / Buy_Price : {buy_price} / Current_Price : {cur_price_to_sell} / Target_Sell_Price : {round(buy_price * 1.02)} / LosCut_Sell_Price : {math.ceil(buy_price*0.975)} / PnL : {format((cur_price_to_sell - buy_price)/buy_price * 100, '.2f')} %" )
@@ -236,8 +248,14 @@ class Bot(QThread):
                             self.LossCutPrice.emit(math.ceil(buy_price * losscut_rate))
                             self.PnL.emit(monitoring_pnl)
 
-                            # Sell the coin
-                            if cur_price_to_sell >= math.ceil(buy_price * 1.02) or cur_price_to_sell <= math.ceil(buy_price * losscut_rate):# or sell_timing is True:
+                            # add sell signals : 5분봉이 하락전환 시 매도 
+                            sell_signal1 = signals.sell_signal1(Ticker, 5)
+
+                            # Get sell signal. Sell the coin
+                            if cur_price_to_sell >= math.ceil(buy_price * profit_rate) or 
+                               cur_price_to_sell <= math.ceil(buy_price * losscut_rate) or
+                               sell_signal1 is True:
+
                                 remained_coin = upbit.get_balance(Ticker)
                                 resp_sell = upbit.sell_limit_order(Ticker, cur_price_to_sell, remained_coin)
                                 sell_price = cur_price_to_sell
