@@ -100,7 +100,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>510</y>
+      <y>570</y>
       <width>641</width>
       <height>111</height>
      </rect>
@@ -461,7 +461,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>400</y>
+      <y>390</y>
       <width>641</width>
       <height>81</height>
      </rect>
@@ -520,7 +520,7 @@
     <property name="geometry">
      <rect>
       <x>250</x>
-      <y>630</y>
+      <y>690</y>
       <width>113</width>
       <height>32</height>
      </rect>
@@ -533,7 +533,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>670</y>
+      <y>710</y>
       <width>1191</width>
       <height>311</height>
      </rect>
@@ -546,7 +546,7 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>700</y>
+      <y>740</y>
       <width>1171</width>
       <height>271</height>
      </rect>
@@ -558,7 +558,7 @@
       <x>660</x>
       <y>20</y>
       <width>551</width>
-      <height>661</height>
+      <height>701</height>
      </rect>
     </property>
     <property name="title">
@@ -701,12 +701,32 @@
       </property>
      </column>
     </widget>
+    <widget class="QTextEdit" name="total_ask_size">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>660</y>
+       <width>241</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="total_bid_size">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>660</y>
+       <width>241</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
    </widget>
    <widget class="QPushButton" name="start_orderbook">
     <property name="geometry">
      <rect>
       <x>370</x>
-      <y>630</y>
+      <y>690</y>
       <width>151</width>
       <height>32</height>
      </rect>
@@ -719,7 +739,7 @@
     <property name="geometry">
      <rect>
       <x>522</x>
-      <y>630</y>
+      <y>690</y>
       <width>131</width>
       <height>32</height>
      </rect>
@@ -737,6 +757,65 @@
       <height>31</height>
      </rect>
     </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_7">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>470</y>
+      <width>641</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Signal3. 5분 Moving Average &gt; 20분 Moving Average</string>
+    </property>
+    <widget class="QTextEdit" name="total_size">
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>30</y>
+       <width>181</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_30">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>141</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>총매도수량 - 총매수수량</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="sig_signal4">
+     <property name="geometry">
+      <rect>
+       <x>530</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_9">
+     <property name="geometry">
+      <rect>
+       <x>420</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>시그널 충족여부</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">

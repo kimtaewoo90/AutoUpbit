@@ -13,6 +13,7 @@ import pandas as pd
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtWidgets import QMainWindow, QApplication, QProgressBar, QTableWidgetItem, QHeaderView
 from PyQt5 import uic
+from PyQt5.QtGui import QColor
 
 # Users package
 import Strategy1
@@ -74,6 +75,9 @@ class MainWindows(QMainWindow, main_ui):
         self.bot.GetMAsignals.connect(self.GetMAsignals)
         self.bot.GetTargetPrice.connect(self.GetTargetPrice)
         self.bot.GetBuyCnt.connect(self.GetBuyCnt)
+        self.bot.TotalAskSize.connect(self.TotalAskSize)
+        self.bot.TotalBidSize.connect(self.TotalBidSize)
+        self.bot.TotalSize.connect(self.TotalSize)
 
         # Sell Monitoring
         #self.bot.TargetTicker.connect(self.TargetTicker)
@@ -89,6 +93,8 @@ class MainWindows(QMainWindow, main_ui):
         self.bot.GetSignal1.connect(self.GetSignal1)
         self.bot.GetSignal2.connect(self.GetSignal2)
         self.bot.GetSignal3.connect(self.GetSignal3)
+        self.bot.GetSignal4.connect(self.GetSignal4)
+
 
 
  
@@ -111,10 +117,6 @@ class MainWindows(QMainWindow, main_ui):
         for i in range(10):
             
             # 매수호가량
-            #item_0 = QTableWidgetItem(str(""))
-            #item_0.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            #self.orderbook.setItem(10 + i, 2, item_0)
-
             item_0 = QProgressBar(self.orderbook)
             item_0.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             item_0.setStyleSheet("""
@@ -200,9 +202,15 @@ class MainWindows(QMainWindow, main_ui):
     
     def Log(self, contents):
         self.log_text.appendPlainText(str(contents))
+
     def Balance(self, contents):
         self.info_balance.setText(str(contents))
+        
     def TotalPnL(self, contents):
+        if contents > 0:
+            self.cur_price.setTextColor(QColor(0,0,255))
+        elif contents < 0:
+            self.cur_price.setTextColor(QColor(255,0,0))
         self.info_pnl.setText(str(contents))
 
     def GetSignal1(self, contents):
@@ -211,37 +219,75 @@ class MainWindows(QMainWindow, main_ui):
         self.sig_signal2.setText(str(contents))
     def GetSignal3(self, contents):
         self.sig_signal3.setText(str(contents))
+    def GetSignal4(self, contents):
+        self.sig_signal4.setText(str(contents))
 
     # Buy Monitoring
     def GetTicker(self, ticker):
         self.sig_ticker.setText(ticker)
-    def GetCurPrice(self, cur_price):
+
+    def GetCurPrice(self, cur_price, target_price):
         self.cur_price.setText(str(cur_price))
+        if cur_price > target_price:
+            self.cur_price.setTextColor(QColor(0,0,255))
+        elif cur_price < target_price:    
+            self.cur_price.setTextColor(QColor(255,0,0))
+        
     def GetFiveClose(self, five_close):
         self.sig_five_close_1.setText(str(five_close))
         self.sig_five_close_2.setText(str(five_close))
+
     def GetFiveOpen(self, five_open):
         self.sig_five_open.setText(str(five_open))
+
     def GetMAsignals(self, signals):
         self.sig_ma.setText(str(signals))
+
     def GetTargetPrice(self, target_price):
         self.sig_target_price.setText(str(target_price))
+
     def GetBuyCnt(self, buy_cnt):
         self.sig_buy_cnt.setText(str(buy_cnt))
+    
+    def TotalAskSize(self, contents):
+        self.total_ask_size.setText(str(contents))
+        self.total_ask_size.setTextColor(QColor(255,0,0))
+
+    def TotalBidSize(self, contents):
+        self.total_bid_size.setText(str(contents))
+        self.total_bid_size.setTextColor(QColor(0,0,255))
+
+    def TotalSize(self, contents):
+        self.total_size.setText(str(contents))
+        if contents > 0:
+            self.total_size.setTextColor(QColor(255, 0, 0))
+        elif contents < 0:
+            self.total_size.setTextColor(QColor(0, 0, 255))
 
     # Sell Monitoring
     def TargetTicker(self, contents):
         self.pro_ticker.setText(str(contents))
+
     def BuyPrice(self, contents):
         self.pro_buy_price.setText(str(contents))
+
     def CurPrice(self, contents):
         self.cur_price.setText(str(contents))
+
     def TargetPrice(self, contents):
         self.pro_target_price.setText(str(contents))
+
     def LossCutPrice(self, contents):
         self.pro_losscut_price.setText(str(contents))
+
     def PnL(self, contents):
+        if contents > 0:
+            self.cur_price.setTextColor(QColor(0,0,255))
+        elif contents < 0:
+            self.cur_price.setTextColor(QColor(255,0,0))
+        contents = f"{format(contents, '.2f')} %"
         self.pro_pnl.setText(str(contents))
+
     def ProfitTime(self, contents):
         self.pro_profit_cnt.setText(str(contents))
     def LossTime(self, contents):

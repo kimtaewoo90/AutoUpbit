@@ -42,7 +42,7 @@ class UtilClass:
 
 
     def GetMA(self, ticker, cur_price, big_days, small_days):
-        df = pyupbit.get_ohlcv(ticker, "minute3")
+        df = pyupbit.get_ohlcv(ticker, "minute5")
         closed = df["close"]
 
         closed[-1] = cur_price
@@ -51,6 +51,7 @@ class UtilClass:
 
         # signal_1
         if big_windows.mean()[-1] < small_windows.mean()[-1]:
+            # signal_2
             if big_windows.mean()[-2] < big_windows.mean()[-1] and small_windows.mean()[-2] < small_windows.mean()[-1]:
                 return True
             else:
@@ -61,7 +62,7 @@ class UtilClass:
 
     def GetTarget(self, ticker):
         Ticker = ticker
-        df = pyupbit.get_ohlcv(Ticker, "minute3")
+        df = pyupbit.get_ohlcv(Ticker, "minute5")
 
         res = df.iloc[-2]
         return res

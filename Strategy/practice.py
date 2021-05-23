@@ -13,6 +13,11 @@ from PyQt5 import uic
 from functions import Utils
 
 
+orders = pyupbit.get_orderbook("BTC-HUNT")
+
+
+
+
 class OrderbookWorker(QThread):
 
     dataSent = pyqtSignal(list)
